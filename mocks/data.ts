@@ -1,0 +1,93 @@
+import { Post, Rating, User } from "@/types";
+
+export const mockUsers: User[] = [
+  {
+    id: "user-1",
+    nickname: "CarHunter",
+    avatarUrl: "https://i.pravatar.cc/150?u=user1",
+    totalPosts: 3,
+    averageRating: 4.2,
+    totalRatingsGiven: 5,
+    pendingPostId: undefined,
+    ratingsNeededToPublish: 0,
+  },
+  {
+    id: "user-2",
+    nickname: "DealFinder",
+    avatarUrl: "https://i.pravatar.cc/150?u=user2",
+    totalPosts: 2,
+    averageRating: 3.8,
+    totalRatingsGiven: 8,
+    pendingPostId: undefined,
+    ratingsNeededToPublish: 0,
+  },
+];
+
+export const mockPosts: Post[] = [
+  {
+    id: "post-1",
+    userId: "user-1",
+    title: "2019 Honda Civic LX",
+    description: "Clean title, one owner, 45k miles. Regular maintenance done at dealer. No accidents.",
+    price: 18500,
+    status: "rated",
+    averageRating: 4.2,
+    ratingCount: 12,
+    ratingBreakdown: { 1: 0, 2: 1, 3: 2, 4: 4, 5: 5 },
+    createdAt: "2024-11-28T10:00:00Z",
+    updatedAt: "2024-11-28T10:00:00Z",
+  },
+  {
+    id: "post-2",
+    userId: "user-1",
+    title: "2020 Toyota Camry SE",
+    description: "Excellent condition, 32k miles. Leather seats, sunroof, backup camera.",
+    price: 24000,
+    status: "live",
+    averageRating: 3.5,
+    ratingCount: 4,
+    createdAt: "2024-11-27T15:30:00Z",
+    updatedAt: "2024-11-27T15:30:00Z",
+  },
+  {
+    id: "post-3",
+    userId: "user-1",
+    title: "2018 Ford F-150 XLT",
+    description: "4x4, crew cab, 60k miles. Tow package included. Minor scratches on tailgate.",
+    price: 32000,
+    status: "pending",
+    averageRating: 0,
+    ratingCount: 0,
+    createdAt: "2024-11-29T08:00:00Z",
+    updatedAt: "2024-11-29T08:00:00Z",
+  },
+  {
+    id: "post-4",
+    userId: "user-2",
+    title: "2017 BMW 3 Series",
+    description: "Sport package, 55k miles. New tires, recently serviced. Salvage title.",
+    price: 19500,
+    status: "live",
+    averageRating: 2.8,
+    ratingCount: 6,
+    createdAt: "2024-11-26T12:00:00Z",
+    updatedAt: "2024-11-26T12:00:00Z",
+  },
+  {
+    id: "post-5",
+    userId: "user-2",
+    title: "2021 Mazda CX-5 Touring",
+    description: "Like new, 18k miles. Full warranty remaining. All-wheel drive.",
+    price: 28500,
+    status: "live",
+    averageRating: 4.6,
+    ratingCount: 8,
+    createdAt: "2024-11-25T09:00:00Z",
+    updatedAt: "2024-11-25T09:00:00Z",
+  },
+];
+
+export const mockRatings: Rating[] = [
+  { id: "rating-1", postId: "post-1", userId: "user-2", rating: 4, createdAt: "2024-11-28T11:00:00Z" },
+  { id: "rating-2", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+];
