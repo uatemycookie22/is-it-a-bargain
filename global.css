@@ -3,3 +3,81 @@
 @import "tailwindcss/utilities.css";
 
 @import "nativewind/theme";
+
+/* 
+  SEMANTIC TOKENS APPROACH
+  
+  Colors are defined in:
+  - theme/colors.ts (source of truth)
+  - tailwind.config.js (extends Tailwind with semantic tokens)
+  
+  Usage in components:
+  - className="bg-primary" (not bg-green-500)
+  - className="text-text-primary" (not text-gray-900)
+  
+  For icons/props that need raw values:
+  - import { colors } from "@/theme/colors"
+  - <Icon color={colors.primary.DEFAULT} />
+  
+  NOTE: @apply can only use default Tailwind classes, not custom tokens.
+  Use custom tokens directly in className props.
+*/
+
+/* Component Classes - Reusable patterns */
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 p-4 shadow-sm;
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    @apply py-4 rounded-lg items-center justify-center;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 py-4 rounded-lg items-center justify-center;
+  }
+  
+  .btn-disabled {
+    @apply bg-gray-100 py-4 rounded-lg items-center justify-center opacity-50;
+  }
+  
+  /* Form Inputs */
+  .input {
+    @apply border border-gray-300 rounded-lg px-4 py-3 text-base bg-white;
+  }
+  
+  .input-error {
+    @apply border-red-500;
+  }
+  
+  .input-label {
+    @apply text-sm font-medium text-gray-700 mb-2;
+  }
+  
+  .error-text {
+    @apply text-red-500 text-sm mt-1;
+  }
+  
+  .helper-text {
+    @apply text-gray-400 text-xs mt-1;
+  }
+  
+  /* Status Badges */
+  .badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .badge-pending {
+    @apply bg-amber-100 text-amber-800;
+  }
+  
+  .badge-live {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .badge-rated {
+    @apply bg-blue-100 text-blue-800;
+  }
+}
