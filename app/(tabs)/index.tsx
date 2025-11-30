@@ -1,7 +1,6 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { Stack } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { User } from "lucide-react-native";
