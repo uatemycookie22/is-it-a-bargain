@@ -31,6 +31,10 @@ export default function RootLayout() {
           name="post-created"
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="post/[id]"
+          options={{ headerShown: true }}
+        />
       </Stack>
     </QueryClientProvider>
   );
