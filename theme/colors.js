@@ -22,6 +22,7 @@ const palette = {
     400: "#9ca3af",
     500: "#6b7280",
     700: "#374151",
+    800: "#1f2937",
     900: "#111827",
   },
   red: {
@@ -40,6 +41,7 @@ const palette = {
     800: "#1e40af",
   },
   white: "#ffffff",
+  black: "#000000",
 };
 
 // Semantic Tokens - USE THESE
