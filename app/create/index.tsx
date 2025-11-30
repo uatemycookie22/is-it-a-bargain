@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Pressable } from "react-native";
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useCreatePostStore } from "@/stores/createPostStore";
 import { createPostStep1Schema } from "@/schemas/post";
@@ -22,7 +22,12 @@ export default function CreateStep1() {
   };
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900 p-4">
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={100}
+      className="flex-1 bg-white dark:bg-gray-900"
+    >
+    <View className="flex-1 p-4">
       <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</Text>
       <TextInput
         className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-4 text-base text-gray-900 dark:text-white w-full"
@@ -56,5 +61,6 @@ export default function CreateStep1() {
         <Text className="text-white text-center font-semibold text-lg">Continue</Text>
       </Pressable>
     </View>
+    </KeyboardAvoidingView>
   );
 }
