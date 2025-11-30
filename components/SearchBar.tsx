@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { View, TextInput, TouchableOpacity, Platform } from "react-native";
+import { View, TextInput, TouchableOpacity } from "react-native";
 import { Search, X } from "lucide-react-native";
 import { colors } from "@/theme/colors";
 
@@ -26,10 +26,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search..." }: Pr
         <TextInput
           ref={inputRef}
           className="flex-1 text-base text-text-primary dark:text-white"
-          style={[
-            { paddingLeft: 8 },
-            Platform.OS === "web" ? { outlineStyle: "none" } : undefined
-          ]}
+          style={{ paddingLeft: 8, lineHeight: 0 }}
           placeholder={placeholder}
           placeholderTextColor={colors.text.tertiary}
           value={value}
