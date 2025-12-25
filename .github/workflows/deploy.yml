@@ -70,6 +70,10 @@ jobs:
               podman login --username AWS --password-stdin \
               814155132173.dkr.ecr.us-east-1.amazonaws.com
             
+            echo "📁 Creating data directory if not exists..."
+            sudo mkdir -p /data/bargain
+            sudo chown ubuntu:ubuntu /data/bargain
+            
             echo "📥 Pulling latest image from ECR..."
             podman pull ${{ env.ECR_IMAGE }}
             
@@ -81,6 +85,8 @@ jobs:
             podman run -d \
               --name bargain-api \
               -p 3001:3001 \
+              -v /data/bargain:/data:Z \
+              -e DATABASE_URL=/data/bargain.db \
               --restart unless-stopped \
               ${{ env.ECR_IMAGE }}
             

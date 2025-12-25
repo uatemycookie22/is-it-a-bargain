@@ -1,50 +1,122 @@
-# Welcome to your Expo app 👋
+# Is It A Bargain?
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app for rating and discovering good deals on items. Built with Expo Router and deployed to AWS Lightsail.
 
-## Get started
+## Architecture
 
-1. Install dependencies
+- **Mobile App**: Expo (React Native) with file-based routing
+- **API Routes**: Expo Router API routes (server-side)
+- **Backend**: Node.js + Express + `expo-server`
+- **Deployment**: AWS Lightsail Instance (shared with superhero-ttrpg)
+- **CI/CD**: GitHub Actions → ECR → Lightsail
+- **Domain**: https://bargain-api.callingallheroes.net
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Development
 
 ```bash
-npm run reset-project
+# Install dependencies
+npm install
+
+# Start dev server
+npx expo start
+
+# Run on iOS
+npx expo run:ios
+
+# Run on Android
+npx expo run:android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## API Routes
 
-## Learn more
+API routes are defined in `app/api/` with `+api.ts` suffix:
 
-To learn more about developing your project with Expo, look at the following resources:
+- `GET /api/user` - Get current user info
+- `GET /api/posts` - List user's posts
+- `POST /api/posts` - Create new post
+- `GET /api/posts/[id]` - Get specific post
+- `GET /api/posts-to-rate` - Get posts to rate
+- `POST /api/ratings` - Submit rating
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Currently using mock data in `mocks/data.ts`.
 
-## Join the community
+## Production Deployment
 
-Join our community of developers creating universal apps.
+### API Server
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The API is deployed to AWS Lightsail at `https://bargain-api.callingallheroes.net`.
+
+**Automatic deployment via GitHub Actions:**
+- Push to `main` branch triggers deployment
+- Builds Docker image and pushes to ECR
+- Deploys to Lightsail instance via SSH
+- Zero-downtime deployment
+
+**Manual deployment:**
+```bash
+# Build and push
+docker build --platform linux/amd64 -t bargain-api .
+docker tag bargain-api:latest 814155132173.dkr.ecr.us-east-1.amazonaws.com/bargain-api-ecr-repo:latest
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 814155132173.dkr.ecr.us-east-1.amazonaws.com
+docker push 814155132173.dkr.ecr.us-east-1.amazonaws.com/bargain-api-ecr-repo:latest
+
+# Deploy on instance
+ssh ubuntu@18.215.116.116
+podman pull 814155132173.dkr.ecr.us-east-1.amazonaws.com/bargain-api-ecr-repo:latest
+podman stop bargain-api && podman rm bargain-api
+podman run -d --name bargain-api -p 3001:3001 --restart unless-stopped 814155132173.dkr.ecr.us-east-1.amazonaws.com/bargain-api-ecr-repo:latest
+```
+
+### Mobile App
+
+Build release version:
+```bash
+# iOS
+npx expo run:ios --configuration Release --device "lhphone"
+
+# Android
+npx expo run:android --variant release
+```
+
+The app connects to the production API at `https://bargain-api.callingallheroes.net` (configured in `app.json`).
+
+## Project Structure
+
+```
+app/
+├── (tabs)/          # Tab navigation screens
+├── api/             # API routes (server-side)
+├── create/          # Post creation flow
+├── post/            # Post detail screens
+└── +middleware.ts   # Request logging middleware
+
+lib/
+└── api.ts           # API client functions
+
+mocks/
+└── data.ts          # Mock data (users, posts, ratings)
+```
+
+## Infrastructure
+
+Infrastructure is managed in the `personal-website-cdk` repository:
+
+- **ECR Repository**: `bargain-api-ecr-repo` (in DndApplicationStack)
+- **IAM Role**: GitHub Actions OIDC role (in BargainApiCicdStack)
+- **DNS**: Route53 A record for `bargain-api.callingallheroes.net`
+- **HTTPS**: Caddy reverse proxy with automatic Let's Encrypt
+
+## Environment Variables
+
+The API origin is configured in `app.json`:
+
+```json
+{
+  "plugins": [
+    ["expo-router", {
+      "origin": "https://bargain-api.callingallheroes.net",
+      "unstable_useServerMiddleware": true
+    }]
+  ]
+}
+```

@@ -2,6 +2,7 @@ import path from 'path';
 import { createRequestHandler } from 'expo-server/adapter/express';
 import express from 'express';
 import compression from 'compression';
+import { runMigrations } from './db/migrate';
 
 const CLIENT_BUILD_DIR = path.join(process.cwd(), 'dist/client');
 const SERVER_BUILD_DIR = path.join(process.cwd(), 'dist/server');
@@ -22,4 +23,8 @@ app.use(
 app.all('/{*all}', createRequestHandler({ build: SERVER_BUILD_DIR }));
 
 const port = process.env.PORT || 3001;
+
+// Run migrations before starting server
+runMigrations();
+
 app.listen(port, () => console.log(`Server listening on port ${port}`));

@@ -32,16 +32,22 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 expo
 
 # Install runtime dependencies only
-RUN npm install express compression tsx
+RUN npm install express compression tsx better-sqlite3 drizzle-orm
 
 COPY --from=builder --chown=expo:nodejs /app/dist ./dist
+COPY --from=builder --chown=expo:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=expo:nodejs /app/db ./db
 COPY --from=builder --chown=expo:nodejs /app/node_modules/expo-server ./node_modules/expo-server
 COPY --from=builder --chown=expo:nodejs /app/server.ts ./server.ts
+
+# Create data directory for SQLite
+RUN mkdir -p /data && chown expo:nodejs /data
 
 USER expo
 
 EXPOSE 3001
 
 ENV PORT=3001
+ENV DATABASE_URL=/data/bargain.db
 
 CMD ["npx", "tsx", "server.ts"]

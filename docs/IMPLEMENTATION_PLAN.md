@@ -6,6 +6,37 @@ A mobile app where users post real listings (starting with used cars from Facebo
 
 ---
 
+## Deployment Architecture
+
+### Production Setup (Completed)
+
+**API Server:**
+- Deployed to AWS Lightsail Instance (shared with superhero-ttrpg)
+- URL: https://bargain-api.callingallheroes.net
+- Port: 3001
+- Container: `bargain-api` (podman)
+- Image: ECR `bargain-api-ecr-repo:latest`
+
+**CI/CD Pipeline:**
+- GitHub Actions workflow on push to `main`
+- Builds Docker image with Expo API routes (`npx expo export -p web --no-ssg`)
+- Pushes to ECR using OIDC (no access keys)
+- SSH deploys to Lightsail instance
+- Zero-downtime deployment with `podman run --restart unless-stopped`
+
+**Infrastructure (CDK):**
+- ECR: `BargainApiEcr` construct in `DndApplicationStack`
+- IAM: `BargainApiCicdStack` with GitHub OIDC role
+- DNS: Route53 A record in `DndDomainStack`
+- HTTPS: Caddy reverse proxy with Let's Encrypt
+
+**Current State:**
+- All API routes use mock data (`mocks/data.ts`)
+- No database yet - in-memory state
+- Middleware logging enabled for request/response tracking
+
+---
+
 ## App Inspirations
 
 ### Instagram - Post Creation Flow
