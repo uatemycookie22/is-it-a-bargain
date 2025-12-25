@@ -53,6 +53,60 @@ const styles = StyleSheet.create({ container: { flex: 1 } });
 <View style={styles.container}>...</View>
 ```
 
+### Dark Mode (CRITICAL)
+**All components MUST support dark mode using `dark:` classes.**
+
+- ✅ Use `dark:` prefix for dark mode variants: `bg-white dark:bg-gray-800`
+- ✅ Test in both light and dark mode
+- ✅ Expo automatically follows system appearance when `userInterfaceStyle: "automatic"` is set in app.json
+- ❌ Do NOT use `@apply` with dark mode variants in CSS - it doesn't work
+- ✅ Use component-based approach for reusable styled elements (e.g., `Card` component, not `.card` CSS class)
+
+**Example:**
+```tsx
+// ✅ CORRECT - Dark mode support in components
+<View className="bg-white dark:bg-gray-800">
+  <Text className="text-gray-900 dark:text-white">Title</Text>
+  <Text className="text-gray-600 dark:text-gray-400">Description</Text>
+</View>
+
+// ✅ CORRECT - Reusable Card component with dark mode
+export function Card({ className = "", ...props }: ViewProps) {
+  return (
+    <View
+      className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 ${className}`}
+      {...props}
+    />
+  );
+}
+
+// ✅ CORRECT - Dark mode for navigation (tab bar, headers)
+import { useColorScheme } from "react-native";
+
+const colorScheme = useColorScheme();
+const isDark = colorScheme === "dark";
+
+<Tabs
+  screenOptions={{
+    tabBarStyle: {
+      backgroundColor: isDark ? "#1f2937" : "#ffffff",
+      borderTopColor: isDark ? "#374151" : "#e5e7eb",
+    },
+    headerStyle: {
+      backgroundColor: isDark ? "#1f2937" : "#ffffff",
+    },
+    headerTintColor: isDark ? "#ffffff" : "#000000",
+  }}
+>
+
+// ❌ WRONG - CSS @apply with dark mode (doesn't work)
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-800; /* dark: won't work in @apply */
+  }
+}
+```
+
 ### Semantic Tokens (CRITICAL)
 **Use semantic naming for colors and design tokens. Never use color names directly.**
 
@@ -132,6 +186,31 @@ import { colors } from "@/theme/colors";
 **Known Limitations:**
 - `@apply` in `global.css` only works with default Tailwind classes, not custom tokens
 - Some complex components (like elevated tab buttons) may need default Tailwind classes
+
+### Key Learnings from Implementation
+
+**Phase 1 & 2 Learnings:**
+1. **Component over CSS classes** - Use `<Card>` component instead of `.card` CSS class for dark mode support
+2. **useTransition for search** - Prevents flickering when filtering lists
+3. **keepPreviousData** - Shows old data while fetching new data (smooth UX)
+4. **Dark mode navigation** - Tab bars and headers need `useColorScheme()` from React Native, not NativeWind
+5. **FlashList optimization** - Use `removeClippedSubviews={false}` to disable animations, `keyExtractor` for stable keys
+6. **Search UX** - Icon on left, cancel button on focus, blur on cancel, scroll to top on search change
+
+**Phase 3 Learnings:**
+1. **Star rating widget fires multiple onChange** - Don't auto-submit on star selection; use separate Submit button
+2. **Reset state on card change** - Use `key={post.id}` on RatingCard to reset rating state when post changes
+3. **Dynamic className with semantic tokens breaks dark mode** - Use default Tailwind colors (e.g., `bg-green-500`) for dynamic classes
+
+**Phase 4 Learnings:**
+1. **iOS TextInput vertical alignment bug** - Text appears at bottom instead of center. Fix: `style={{ lineHeight: 0 }}`
+2. **Zod error API** - Use `result.error.issues` not `result.error.errors`
+3. **Safe area insets** - Use NativeWind's `mb-safe-or-8` class instead of `useSafeAreaInsets()` hook
+4. **Cancel button for create flow** - Add Cancel button on first step only; other steps use default back arrow
+5. **Button styling** - Use `rounded-2xl`, `w-4/5`, `self-center`, `mb-safe-or-8` for bottom buttons
+
+**Phase 5 Learnings:**
+1. **Link with asChild breaks NativeWind** - `<Link asChild>` strips className styles from child components. Use `useRouter()` instead for navigation with styled components.
 
 ---
 
@@ -352,60 +431,187 @@ export default function ProfileScreen() {
 
 ## Phase 2: Home Screen (User's Posts)
 
+### 2.0 Card Component (Reusable)
+File: `components/Card.tsx`
+
+**Why a component instead of CSS class?**
+- `@apply` in CSS doesn't support dark mode variants
+- Component-based approach allows dark mode to work properly
+- Reusable across the app
+
+```tsx
+import { View, ViewProps } from "react-native";
+
+export function Card({ className = "", ...props }: ViewProps) {
+  return (
+    <View
+      className={`p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}
+      {...props}
+    />
+  );
+}
+```
+
 ### 2.1 Home Screen
 File: `app/(tabs)/index.tsx`
 
 Requirements:
-- Search bar at top to filter posts
+- Search bar with icon, cancel button, focus state
 - Infinite scroll list using FlashList
 - Shows only current user's posts
 - Pull to refresh
 - Empty state when no posts
+- Dark mode support
+- Smooth search with useTransition (no flickering)
 
 ```tsx
-import { useState } from "react";
-import { View, TextInput } from "react-native";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { View, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
+import { User } from "lucide-react-native";
 import { PostCard } from "@/components/PostCard";
+import { EmptyState } from "@/components/EmptyState";
+import { SearchBar } from "@/components/SearchBar";
+import { fetchMyPosts } from "@/lib/api";
+import { colors } from "@/theme/colors";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const listRef = useRef<FlashList<any>>(null);
 
-  // TODO: Replace with actual API call
-  const { data, fetchNextPage, hasNextPage, refetch, isRefreshing } = 
+  const { data, fetchNextPage, hasNextPage, refetch, isRefetching } = 
     useInfiniteQuery({
       queryKey: ["my-posts", search],
-      queryFn: ({ pageParam = 0 }) => fetchMyPosts({ page: pageParam, search }),
+      queryFn: ({ pageParam }) => fetchMyPosts({ page: pageParam, search }),
       getNextPageParam: (lastPage) => lastPage.nextPage,
+      initialPageParam: 0,
+      placeholderData: keepPreviousData,
     });
 
   const posts = data?.pages.flatMap((page) => page.posts) ?? [];
 
+  // Scroll to top when search changes
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [search]);
+
+  const handleSearchChange = (text: string) => {
+    startTransition(() => {
+      setSearch(text);
+    });
+  };
+
   return (
-    <View className="flex-1 bg-white">
-      <TextInput
-        className="mx-4 mt-4 px-4 py-3 bg-gray-100 rounded-lg"
-        placeholder="Search your posts..."
-        value={search}
-        onChangeText={setSearch}
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: "My Posts",
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/profile")}
+              className="mr-4"
+            >
+              <User color={colors.primary.DEFAULT} size={24} />
+            </TouchableOpacity>
+          ),
+        }}
       />
-      <FlashList
-        data={posts}
-        renderItem={({ item }) => <PostCard post={item} />}
-        estimatedItemSize={150}
-        onEndReached={() => hasNextPage && fetchNextPage()}
-        onEndReachedThreshold={0.5}
-        refreshing={isRefreshing}
-        onRefresh={refetch}
-        ListEmptyComponent={<EmptyState />}
-      />
+      <View className="flex-1 bg-background-primary dark:bg-gray-900">
+        <View className="mx-4 mt-4 mb-2">
+          <SearchBar
+            value={search}
+            onChangeText={handleSearchChange}
+            placeholder="Search your posts..."
+          />
+        </View>
+        <FlashList
+          ref={listRef}
+          data={posts}
+          renderItem={({ item }) => <PostCard post={item} />}
+          estimatedItemSize={150}
+          onEndReached={() => hasNextPage && fetchNextPage()}
+          onEndReachedThreshold={0.5}
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          ListEmptyComponent={posts.length === 0 && !isRefetching ? <EmptyState /> : null}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          keyExtractor={(item) => item.id}
+          removeClippedSubviews={false}
+        />
+      </View>
+    </>
+  );
+}
+```
+
+### 2.2 SearchBar Component
+File: `components/SearchBar.tsx`
+
+Requirements:
+- Search icon on left
+- Cancel button (X) appears on focus
+- Blur input when cancel pressed
+- Dark mode support
+- No black outline on web
+
+```tsx
+import { useState, useRef } from "react";
+import { View, TextInput, TouchableOpacity, Platform } from "react-native";
+import { Search, X } from "lucide-react-native";
+import { colors } from "@/theme/colors";
+
+type Props = {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+};
+
+export function SearchBar({ value, onChangeText, placeholder = "Search..." }: Props) {
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  const handleCancel = () => {
+    onChangeText("");
+    setIsFocused(false);
+    inputRef.current?.blur();
+  };
+
+  return (
+    <View className="flex-row items-center">
+      <View className="flex-1 flex-row items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700">
+        <Search color={colors.text.tertiary} size={20} />
+        <TextInput
+          ref={inputRef}
+          className="flex-1 text-base text-text-primary dark:text-white"
+          style={[
+            { paddingLeft: 8 },
+            Platform.OS === "web" ? { outlineStyle: "none" } : undefined
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.text.tertiary}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => !value && setIsFocused(false)}
+        />
+      </View>
+      {isFocused && (
+        <TouchableOpacity onPress={handleCancel} className="ml-2 px-2">
+          <X color={colors.text.secondary} size={20} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 ```
 
-### 2.2 Post Card Component
+### 2.3 Post Card Component
 File: `components/PostCard.tsx`
 
 Requirements:

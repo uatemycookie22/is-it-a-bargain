@@ -1,0 +1,119 @@
+name: Deploy Bargain API to Lightsail Instance
+
+permissions:
+  id-token: write # Required for OIDC authentication
+  contents: read # Required for actions/checkout
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: # Allow manual triggers
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: bargain-api-ecr-repo
+  IMAGE_TAG: ${{ github.sha }}
+  INSTANCE_IP: 18.215.116.116
+  AWS_ROLE_ARN: arn:aws:iam::814155132173:role/DndCicdStack-CicdGitHubActionsRole9B0F19E0-rjXM0Q7Hd3HA
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push to ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy-key
+          chmod 600 ~/.ssh/deploy-key
+
+      - name: Deploy to Instance
+        env:
+          ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+        run: |
+          echo "🚀 Deploying Bargain API to ${{ env.INSTANCE_IP }}"
+          
+          ssh -i ~/.ssh/deploy-key -o StrictHostKeyChecking=no ubuntu@${{ env.INSTANCE_IP }} << 'ENDSSH'
+            set -e
+            
+            echo "🔐 Logging in to ECR..."
+            aws ecr get-login-password --region us-east-1 | \
+              podman login --username AWS --password-stdin \
+              814155132173.dkr.ecr.us-east-1.amazonaws.com
+            
+            echo "📥 Pulling latest image from ECR..."
+            podman pull ${{ env.ECR_IMAGE }}
+            
+            echo "🛑 Stopping old container..."
+            podman stop bargain-api 2>/dev/null || true
+            podman rm bargain-api 2>/dev/null || true
+            
+            echo "🚀 Starting new container..."
+            podman run -d \
+              --name bargain-api \
+              -p 3001:3001 \
+              --restart unless-stopped \
+              ${{ env.ECR_IMAGE }}
+            
+            echo "⏳ Waiting for container to start..."
+            sleep 5
+            
+            echo "🧹 Cleaning up old images..."
+            podman image prune -a -f
+            
+            echo "✅ Deployment complete!"
+            podman ps | grep bargain-api
+          ENDSSH
+
+      - name: Verify Deployment
+        run: |
+          echo "⏳ Waiting for API to be ready..."
+          sleep 10
+          
+          echo "🔍 Testing HTTPS endpoint..."
+          curl -f -m 10 "https://bargain-api.callingallheroes.net/api/user"
+          
+          echo "✅ Deployment verified!"
+
+      - name: Deploy Summary
+        run: |
+          echo "### 🎉 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build**: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Message**: ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**🌐 Live**: https://bargain-api.callingallheroes.net/api/user" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment complete!" >> $GITHUB_STEP_SUMMARY
