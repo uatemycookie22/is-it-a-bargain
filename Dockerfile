@@ -29,7 +29,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 expo
+RUN adduser --system --uid 1000 expo
 
 # Install runtime dependencies only
 RUN npm install express compression tsx better-sqlite3 drizzle-orm
@@ -43,7 +43,8 @@ COPY --from=builder --chown=expo:nodejs /app/server.ts ./server.ts
 # Create data directory for SQLite with correct permissions
 RUN mkdir -p /app/data && chown -R expo:nodejs /app/data
 
-USER expo
+# Temporarily run as root to debug permissions
+# USER expo
 
 EXPOSE 3001
 
