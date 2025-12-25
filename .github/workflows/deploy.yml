@@ -72,7 +72,8 @@ jobs:
             
             echo "📁 Creating data directory if not exists..."
             sudo mkdir -p /data/bargain
-            sudo chown ubuntu:ubuntu /data/bargain
+            sudo chown -R 101001:101001 /data/bargain
+            ls -ld /data/bargain
             
             echo "📥 Pulling latest image from ECR..."
             podman pull ${{ env.ECR_IMAGE }}
