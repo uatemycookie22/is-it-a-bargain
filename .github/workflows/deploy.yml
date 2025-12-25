@@ -97,7 +97,22 @@ jobs:
             podman image prune -a -f
             
             echo "✅ Deployment complete!"
-            podman ps | grep bargain-api
+            podman ps | grep bargain-api || echo "Warning: Container not found in ps output"
+            
+            echo "📋 Checking container logs..."
+            podman logs --tail 50 bargain-api || echo "Could not fetch logs"
+          ENDSSH
+
+      - name: Check Container Status
+        if: always()
+        run: |
+          echo "🔍 Checking container status..."
+          ssh -i ~/.ssh/deploy-key -o StrictHostKeyChecking=no ubuntu@${{ env.INSTANCE_IP }} << 'ENDSSH'
+            echo "Container status:"
+            podman ps -a | grep bargain-api || echo "Container not found"
+            echo ""
+            echo "Recent logs:"
+            podman logs --tail 100 bargain-api 2>&1 || echo "Could not fetch logs"
           ENDSSH
 
       - name: Verify Deployment
