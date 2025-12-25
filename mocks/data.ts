@@ -90,4 +90,11 @@ export const mockPosts: Post[] = [
 export const mockRatings: Rating[] = [
   { id: "rating-1", postId: "post-1", userId: "user-2", rating: 4, createdAt: "2024-11-28T11:00:00Z" },
   { id: "rating-2", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-3", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-4", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-5", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-6", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-7", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-8", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
+  { id: "rating-9", postId: "post-1", userId: "user-3", rating: 5, createdAt: "2024-11-28T12:00:00Z" },
 ];
