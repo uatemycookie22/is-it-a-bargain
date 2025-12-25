@@ -85,8 +85,8 @@ jobs:
             podman run -d \
               --name bargain-api \
               -p 3001:3001 \
-              -v /data/bargain:/data:Z \
-              -e DATABASE_URL=/data/bargain.db \
+              -v /data/bargain:/app/data:Z \
+              -e DATABASE_URL=/app/data/bargain.db \
               --restart unless-stopped \
               ${{ env.ECR_IMAGE }}
             

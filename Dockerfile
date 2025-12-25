@@ -40,14 +40,14 @@ COPY --from=builder --chown=expo:nodejs /app/db ./db
 COPY --from=builder --chown=expo:nodejs /app/node_modules/expo-server ./node_modules/expo-server
 COPY --from=builder --chown=expo:nodejs /app/server.ts ./server.ts
 
-# Create data directory for SQLite
-RUN mkdir -p /data && chown expo:nodejs /data
+# Create data directory for SQLite with correct permissions
+RUN mkdir -p /app/data && chown -R expo:nodejs /app/data
 
 USER expo
 
 EXPOSE 3001
 
 ENV PORT=3001
-ENV DATABASE_URL=/data/bargain.db
+ENV DATABASE_URL=/app/data/bargain.db
 
 CMD ["npx", "tsx", "server.ts"]
