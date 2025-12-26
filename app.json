@@ -30,8 +30,7 @@
     },
     "plugins": [
       ["expo-router", {
-        "origin": "https://bargain-api.callingallheroes.net",
-        "unstable_useServerMiddleware": true
+        "origin": "https://bargain-api.callingallheroes.net"
       }],
       [
         "expo-splash-screen",
