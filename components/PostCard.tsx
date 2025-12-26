@@ -35,7 +35,6 @@ export function PostCard({ post }: { post: Post }) {
               rating={post.averageRating}
               onChange={() => {}}
               starSize={16}
-              enableHalfStar={false}
               color="#10b981"
               emptyColor="#d1d5db"
               enableSwiping={false}

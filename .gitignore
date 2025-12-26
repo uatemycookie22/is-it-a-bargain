@@ -45,3 +45,5 @@ app-example
 # SQLite database
 data/*.db
 data/*.db-journal
+.env.local
+.env

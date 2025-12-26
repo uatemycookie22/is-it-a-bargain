@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@better-auth/expo": "https://pkg.pr.new/better-auth/better-auth/@better-auth/expo@6990",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
@@ -20,6 +21,7 @@
     "@tanstack/react-form": "^1.26.0",
     "@tanstack/react-query": "^5.90.11",
     "@tanstack/react-query-devtools": "^5.91.1",
+    "better-auth": "https://pkg.pr.new/better-auth/better-auth@6990",
     "expo": "~54.0.25",
     "expo-blur": "~15.0.7",
     "expo-constants": "~18.0.10",
@@ -28,6 +30,7 @@
     "expo-haptics": "~15.0.7",
     "expo-image": "~3.0.10",
     "expo-linking": "~8.0.9",
+    "expo-network": "~8.0.8",
     "expo-router": "~6.0.15",
     "expo-secure-store": "~15.0.8",
     "expo-splash-screen": "~31.0.11",

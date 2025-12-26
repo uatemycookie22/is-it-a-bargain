@@ -40,7 +40,6 @@ export function RatingCard({ post, onRate, isSubmitting }: Props) {
           rating={rating}
           onChange={(r) => setRating(Math.round(r))}
           starSize={48}
-          enableHalfStar={false}
           color="#10b981"
           emptyColor="#d1d5db"
         />

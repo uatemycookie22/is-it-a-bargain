@@ -1,13 +1,21 @@
 import { Post, Rating, User } from "@/types";
+import { authClient } from "./auth-client";
 
-const API_BASE = "https://bargain-api.callingallheroes.net/api";
+const API_BASE = (process.env.EXPO_PUBLIC_API_URL || "https://bargain-api.callingallheroes.net") + "/api";
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   console.log(`[API] Fetching: ${url}`);
   
+  const cookies = authClient.getCookie();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(cookies ? { "Cookie": cookies } : {}),
+  };
+  
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
+    headers,
+    credentials: "omit",
     ...options,
   });
 
@@ -56,4 +64,8 @@ export async function submitRating(data: { postId: string; rating: number }) {
 // User
 export async function fetchUser() {
   return fetchAPI<{ user: User }>("/user");
+}
+
+export async function checkUsernameAvailable(username: string) {
+  return fetchAPI<{ available: boolean; error?: string }>(`/users/username-available?username=${encodeURIComponent(username)}`);
 }
