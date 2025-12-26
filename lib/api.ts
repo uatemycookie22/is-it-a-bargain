@@ -1,19 +1,27 @@
 import { Post, Rating, User } from "@/types";
 
-const API_BASE = "/api";
+const API_BASE = "https://bargain-api.callingallheroes.net/api";
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  const url = `${API_BASE}${endpoint}`;
+  console.log(`[API] Fetching: ${url}`);
+  
+  const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
 
+  console.log(`[API] Response status: ${res.status}`);
+
   if (!res.ok) {
     const error = await res.json();
+    console.error(`[API] Error:`, error);
     throw new Error(error.error || "API Error");
   }
 
-  return res.json();
+  const data = await res.json();
+  console.log(`[API] Response data:`, data);
+  return data;
 }
 
 // Posts

@@ -24,7 +24,7 @@
       "package": "com.anonymous.isitabargain"
     },
     "web": {
-      "output": "server",
+      "output": "static",
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
