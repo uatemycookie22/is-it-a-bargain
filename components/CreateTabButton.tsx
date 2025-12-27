@@ -2,12 +2,24 @@ import { TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocalPostStore } from "@/stores/localPostStore";
 
 export function CreateTabButton() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { hasPost } = useLocalPostStore();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // If anonymous and already has a local post, go to signup
+    if (!isAuthenticated && hasPost()) {
+      router.push("/signup");
+      return;
+    }
+
+    // Otherwise, go to create flow
     router.push("/create");
   };
 

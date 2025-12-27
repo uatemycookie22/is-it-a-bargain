@@ -42,7 +42,7 @@ export async function fetchPost(id: string) {
   return fetchAPI<{ post: Post }>(`/posts/${id}`);
 }
 
-export async function createPost(data: { title: string; description: string; price: number }) {
+export async function createPost(data: { title: string; description: string; price: number; listingUrl: string; imageUrl: string }) {
   return fetchAPI<{ post: Post }>("/posts", {
     method: "POST",
     body: JSON.stringify(data),
@@ -68,4 +68,12 @@ export async function fetchUser() {
 
 export async function checkUsernameAvailable(username: string) {
   return fetchAPI<{ available: boolean; error?: string }>(`/users/username-available?username=${encodeURIComponent(username)}`);
+}
+
+// Images
+export async function getPresignedUrl(contentType: string, fileExtension?: string) {
+  return fetchAPI<{ uploadUrl: string; imageUrl: string; key: string }>("/images/upload", {
+    method: "POST",
+    body: JSON.stringify({ contentType, fileExtension }),
+  });
 }

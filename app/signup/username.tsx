@@ -3,7 +3,8 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSignupStore } from "@/stores/signupStore";
-import { checkUsernameAvailable } from "@/lib/api";
+import { useLocalPostStore } from "@/stores/localPostStore";
+import { checkUsernameAvailable, createPost } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -46,8 +47,52 @@ export default function SignupStep3() {
       
       return result;
     },
-    onSuccess: (data) => {
-      console.log('[USERNAME] Success! Data:', JSON.stringify(data));
+    onSuccess: async () => {
+      console.log('[USERNAME] Success! Checking for local post...');
+      
+      // Check if there's a local post to upload
+      const localPost = useLocalPostStore.getState().post;
+      if (localPost) {
+        console.log('[USERNAME] Found local post, uploading...');
+        try {
+          let imageUrl = localPost.imageUrl || "";
+          
+          // If there's a local image, upload it first
+          if (localPost.localImageUri && !imageUrl) {
+            console.log('[USERNAME] Uploading local image...');
+            const { getPresignedUrl } = await import("@/lib/api");
+            const contentType = "image/jpeg";
+            const { uploadUrl, imageUrl: cdnUrl } = await getPresignedUrl(contentType, "jpg");
+            
+            const imageResponse = await fetch(localPost.localImageUri);
+            const blob = await imageResponse.blob();
+            
+            const uploadResponse = await fetch(uploadUrl, {
+              method: "PUT",
+              headers: { "Content-Type": contentType },
+              body: blob,
+            });
+            
+            if (uploadResponse.ok) {
+              imageUrl = cdnUrl;
+              console.log('[USERNAME] Image uploaded:', imageUrl);
+            }
+          }
+          
+          await createPost({
+            title: localPost.title,
+            description: localPost.description,
+            price: localPost.price / 100,
+            listingUrl: localPost.listingUrl || "",
+            imageUrl,
+          });
+          useLocalPostStore.getState().clearPost();
+          console.log('[USERNAME] Local post uploaded successfully');
+        } catch (error) {
+          console.error('[USERNAME] Failed to upload local post:', error);
+        }
+      }
+      
       reset();
       router.replace("/(tabs)");
     },

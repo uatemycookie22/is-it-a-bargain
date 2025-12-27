@@ -2,6 +2,7 @@ import "../global.css";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -11,7 +12,8 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack
+      <AuthProvider>
+        <Stack
         screenOptions={{
           headerShown: false,
           headerStyle: { backgroundColor: isDark ? "#1f2937" : "#ffffff" },
@@ -48,7 +50,12 @@ export default function RootLayout() {
           name="post/[id]"
           options={{ headerShown: true }}
         />
+        <Stack.Screen
+          name="post-created-local"
+          options={{ headerShown: false }}
+        />
       </Stack>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

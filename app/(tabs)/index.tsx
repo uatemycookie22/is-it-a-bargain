@@ -1,67 +1,36 @@
 import { useState, useTransition, useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { useRouter, Stack } from "expo-router";
-import { FlashList, FlashListProps, type FlashListRef } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
-import { User, Plus } from "lucide-react-native";
+import { User, Plus, Trash2 } from "lucide-react-native";
 import { PostCard } from "@/components/PostCard";
 import { EmptyState } from "@/components/EmptyState";
 import { SearchBar } from "@/components/SearchBar";
 import { fetchMyPosts } from "@/lib/api";
-import { useSession, authClient } from "@/lib/auth-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocalPostStore } from "@/stores/localPostStore";
 import { colors } from "@/theme/colors";
 import { Post } from "@/types";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { data: session, isPending: authLoading, error: authError } = useSession();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { post: localPost, clearPost } = useLocalPostStore();
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const listRef = useRef<FlashListRef<Post>>(null);
 
-  const isAuthenticated = !!session?.user && !authError;
-
-  // Validate session on mount - if session exists but server says invalid, clear it
-  useEffect(() => {
-    if (session?.user && !authLoading) {
-      // Try to fetch posts to validate session
-      fetchMyPosts({ page: 0, search: "" }).catch((error) => {
-        if (error.message.includes('Unauthorized')) {
-          console.log('[HOME] Session invalid, clearing...');
-          authClient.signOut();
-        }
-      });
-    }
-  }, [session?.user, authLoading]);
-
-  const { data, fetchNextPage, hasNextPage, refetch, isRefetching, isLoading, error: postsError } = 
+  const { data, fetchNextPage, hasNextPage, refetch, isRefetching, isLoading } = 
     useInfiniteQuery({
       queryKey: ["my-posts", search],
       queryFn: ({ pageParam }) => fetchMyPosts({ page: pageParam, search }),
       getNextPageParam: (lastPage) => lastPage.nextPage,
       initialPageParam: 0,
       placeholderData: keepPreviousData,
-      enabled: isAuthenticated, // Only fetch if logged in
-      retry: false, // Don't retry on 401
+      enabled: isAuthenticated,
+      retry: false,
     });
-
-  // If we get 401 error, clear session and redirect to login
-  useEffect(() => {
-    if (postsError && postsError.message.includes('Unauthorized')) {
-      console.log('[HOME] Got 401, clearing session...');
-      authClient.signOut().then(() => {
-        console.log('[HOME] Session cleared');
-      });
-    }
-  }, [postsError]);
-
-  // If session exists but auth failed, clear it
-  useEffect(() => {
-    if (authError && session) {
-      console.log('[HOME] Auth error with session, clearing...');
-      authClient.signOut();
-    }
-  }, [authError, session]);
 
   const posts = data?.pages.flatMap((page) => page.posts) ?? [];
 
@@ -82,10 +51,8 @@ export default function HomeScreen() {
     );
   }
 
-  console.log('[HOME] Auth state:', { isAuthenticated, hasSession: !!session, hasUser: !!session?.user, authError });
-
-  // Not logged in - show welcome screen
-  if (!isAuthenticated) {
+  // Anonymous user with no local post - show welcome
+  if (!isAuthenticated && !localPost) {
     return (
       <>
         <Stack.Screen options={{ headerShown: true, title: "Is It A Bargain?" }} />
@@ -99,12 +66,12 @@ export default function HomeScreen() {
           </Text>
           <TouchableOpacity
             className="bg-green-500 py-4 px-8 rounded-2xl mt-8"
-            onPress={() => router.push("/signup")}
+            onPress={() => router.push("/create")}
           >
             <View className="flex-row items-center">
               <Plus color="#fff" size={20} />
               <Text className="text-white font-semibold text-lg ml-2">
-                Get Started
+                Create Your First Post
               </Text>
             </View>
           </TouchableOpacity>
@@ -113,7 +80,65 @@ export default function HomeScreen() {
     );
   }
 
-  // Logged in - show posts
+  // Anonymous user with local post - show draft with signup banner
+  if (!isAuthenticated && localPost) {
+    const displayImage = localPost.imageUrl || localPost.localImageUri;
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: true, title: "My Posts" }} />
+        <View className="flex-1 bg-white dark:bg-gray-900">
+          <View className="bg-yellow-50 dark:bg-yellow-900/20 mx-4 mt-4 p-4 rounded-xl">
+            <Text className="text-yellow-800 dark:text-yellow-200 font-medium">
+              Sign up to publish your post and let others rate it!
+            </Text>
+            <TouchableOpacity
+              className="bg-green-500 py-2 px-4 rounded-lg mt-3 self-start"
+              onPress={() => router.push("/signup")}
+            >
+              <Text className="text-white font-medium">Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="mx-4 my-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {displayImage && (
+              <Image
+                source={{ uri: displayImage }}
+                className="w-full h-32"
+                resizeMode="cover"
+              />
+            )}
+            <View className="p-4">
+              <View className="flex-row justify-between items-start">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
+                  {localPost.title}
+                </Text>
+                <View className="flex-row items-center">
+                  <View className="bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded-full">
+                    <Text className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                      Draft
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    className="ml-2 p-1"
+                    onPress={() => clearPost()}
+                  >
+                    <Trash2 color="#ef4444" size={20} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text className="text-gray-500 dark:text-gray-400 mt-1" numberOfLines={2}>
+                {localPost.description}
+              </Text>
+              <Text className="text-xl font-bold text-green-500 mt-2">
+                ${(localPost.price / 100).toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </>
+    );
+  }
+
+  // Authenticated user - show their posts
   return (
     <>
       <Stack.Screen

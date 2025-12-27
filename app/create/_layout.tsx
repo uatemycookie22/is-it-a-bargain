@@ -26,8 +26,9 @@ export default function CreateLayout() {
         ),
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Details" }} />
-      <Stack.Screen name="price" options={{ title: "Price", headerLeft: undefined }} />
+      <Stack.Screen name="index" options={{ title: "Listing URL" }} />
+      <Stack.Screen name="image" options={{ title: "Photo", headerLeft: undefined }} />
+      <Stack.Screen name="details" options={{ title: "Details", headerLeft: undefined }} />
       <Stack.Screen name="review" options={{ title: "Review", headerLeft: undefined }} />
     </Stack>
   );
