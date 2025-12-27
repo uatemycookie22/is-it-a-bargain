@@ -1,13 +1,21 @@
 import { View, Text, Pressable, Image, ScrollView, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, LogOut, ChevronRight } from "lucide-react-native";
 import { fetchUser } from "@/lib/api";
+import { signOut } from "@/lib/auth-client";
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { data, isLoading } = useQuery({
     queryKey: ["user"],
     queryFn: fetchUser,
   });
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/");
+  };
 
   const user = data?.user;
 
@@ -66,7 +74,10 @@ export default function ProfileScreen() {
       </View>
 
       {/* Logout */}
-      <Pressable className="bg-white dark:bg-gray-800 mt-4 p-4 flex-row items-center">
+      <Pressable 
+        className="bg-white dark:bg-gray-800 mt-4 p-4 flex-row items-center"
+        onPress={handleLogout}
+      >
         <LogOut color="#ef4444" size={24} />
         <Text className="ml-4 text-base text-red-500">Log Out</Text>
       </Pressable>

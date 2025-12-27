@@ -21,6 +21,19 @@ export default function HomeScreen() {
 
   const isAuthenticated = !!session?.user && !authError;
 
+  // Validate session on mount - if session exists but server says invalid, clear it
+  useEffect(() => {
+    if (session?.user && !authLoading) {
+      // Try to fetch posts to validate session
+      fetchMyPosts({ page: 0, search: "" }).catch((error) => {
+        if (error.message.includes('Unauthorized')) {
+          console.log('[HOME] Session invalid, clearing...');
+          authClient.signOut();
+        }
+      });
+    }
+  }, [session?.user, authLoading]);
+
   const { data, fetchNextPage, hasNextPage, refetch, isRefetching, isLoading, error: postsError } = 
     useInfiniteQuery({
       queryKey: ["my-posts", search],
@@ -32,16 +45,23 @@ export default function HomeScreen() {
       retry: false, // Don't retry on 401
     });
 
-  // If we get 401 error, sign out
+  // If we get 401 error, clear session and redirect to login
   useEffect(() => {
     if (postsError && postsError.message.includes('Unauthorized')) {
-      console.log('[HOME] Got 401, signing out...');
+      console.log('[HOME] Got 401, clearing session...');
       authClient.signOut().then(() => {
-        console.log('[HOME] Signed out, reloading...');
-        window.location.reload();
+        console.log('[HOME] Session cleared');
       });
     }
   }, [postsError]);
+
+  // If session exists but auth failed, clear it
+  useEffect(() => {
+    if (authError && session) {
+      console.log('[HOME] Auth error with session, clearing...');
+      authClient.signOut();
+    }
+  }, [authError, session]);
 
   const posts = data?.pages.flatMap((page) => page.posts) ?? [];
 

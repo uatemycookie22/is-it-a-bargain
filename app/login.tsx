@@ -1,60 +1,38 @@
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
-import { useSignupStore } from "@/stores/signupStore";
-import { authClient, signUp } from "@/lib/auth-client";
+import { useState } from "react";
+import { signIn } from "@/lib/auth-client";
 import { OAuthButtons } from "@/components/OAuthButtons";
 import { z } from "zod";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
-export default function SignupStep1() {
+export default function LoginScreen() {
   const router = useRouter();
-  const { email, password, updateData, errors, setErrors, setStep } = useSignupStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const signupMutation = useMutation({
+  const loginMutation = useMutation({
     mutationFn: async () => {
-      console.log('[SIGNUP] Creating account for:', email);
-      // Create account WITHOUT auto-login
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bargain-api.callingallheroes.net';
-      console.log('[SIGNUP] Using API URL:', apiUrl);
-      const response = await fetch(`${apiUrl}/api/auth/sign-up/email`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Origin': 'exp://192.168.1.245:8081',
-        },
-        body: JSON.stringify({ email, password, name: email.split("@")[0] }),
-      });
-      
-      console.log('[SIGNUP] Response status:', response.status);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('[SIGNUP] Signup failed:', error);
-        throw new Error(error.error || error.message || 'Signup failed');
+      console.log('[LOGIN] Attempting login for:', email);
+      const result = await signIn.email({ email, password });
+      console.log('[LOGIN] Result:', result);
+      if (result.error) {
+        throw new Error(result.error.message || "Login failed");
       }
-      
-      console.log('[SIGNUP] Account created, sending OTP...');
-      // Send OTP for email verification
-      await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
-      console.log('[SIGNUP] OTP sent successfully');
     },
     onSuccess: () => {
-      console.log('[SIGNUP] Success, navigating to verify');
-      setStep(2);
-      router.push("/signup/verify");
+      console.log('[LOGIN] Success, redirecting to home');
+      router.replace("/(tabs)");
     },
     onError: (error: Error) => {
-      console.error('[SIGNUP] Error:', error);
-      if (error.message.includes("already")) {
-        setErrors({ email: "Email has already been registered." });
-      } else {
-        setErrors({ form: error.message });
-      }
+      console.log('[LOGIN] Error:', error.message);
+      setErrors({ form: "Invalid email or password" });
     },
   });
 
@@ -72,16 +50,24 @@ export default function SignupStep1() {
     return true;
   };
 
-  const handleContinue = () => {
+  const handleLogin = () => {
+    console.log('[LOGIN] handleLogin called, email:', email, 'password length:', password.length);
     if (validate()) {
-      signupMutation.mutate();
+      console.log('[LOGIN] Validation passed, calling mutation');
+      loginMutation.mutate();
+    } else {
+      console.log('[LOGIN] Validation failed');
     }
   };
 
   return (
     <View className="flex-1 bg-white dark:bg-gray-900 p-4">
+      <Text className="text-2xl font-bold text-gray-900 dark:text-white text-center mt-8">
+        Welcome back
+      </Text>
+
       {/* OAuth Options */}
-      <View className="mt-4">
+      <View className="mt-8">
         <OAuthButtons
           onSuccess={() => router.replace("/(tabs)")}
           onError={(error) => setErrors({ form: error })}
@@ -105,7 +91,7 @@ export default function SignupStep1() {
         placeholder="you@example.com"
         placeholderTextColor="#9ca3af"
         value={email}
-        onChangeText={(text) => updateData({ email: text })}
+        onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -123,17 +109,22 @@ export default function SignupStep1() {
         className={`border rounded-xl px-4 py-3 text-base text-gray-900 dark:text-white bg-white dark:bg-gray-800 ${
           errors.password ? "border-red-500" : "border-gray-300 dark:border-gray-700"
         }`}
-        placeholder="At least 8 characters"
+        placeholder="Your password"
         placeholderTextColor="#9ca3af"
         value={password}
-        onChangeText={(text) => updateData({ password: text })}
+        onChangeText={setPassword}
         secureTextEntry
-        autoComplete="new-password"
-        textContentType="newPassword"
+        autoComplete="current-password"
+        textContentType="password"
       />
       {errors.password && (
         <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
       )}
+
+      {/* Forgot Password */}
+      <Pressable onPress={() => router.push("/forgot-password")} className="mt-2">
+        <Text className="text-green-500 text-right">Forgot password?</Text>
+      </Pressable>
 
       {errors.form && (
         <Text className="text-red-500 text-sm mt-4 text-center">{errors.form}</Text>
@@ -141,25 +132,25 @@ export default function SignupStep1() {
 
       <View className="flex-1" />
 
-      {/* Continue Button */}
+      {/* Login Button */}
       <Pressable
-        className={`py-4 rounded-2xl w-4/5 self-center mb-8 ${
-          signupMutation.isPending ? "bg-gray-400" : "bg-green-500"
+        className={`py-4 rounded-2xl w-4/5 self-center mb-4 ${
+          loginMutation.isPending ? "bg-gray-400" : "bg-green-500"
         }`}
-        onPress={handleContinue}
-        disabled={signupMutation.isPending}
+        onPress={handleLogin}
+        disabled={loginMutation.isPending}
       >
-        {signupMutation.isPending ? (
+        {loginMutation.isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-white text-center font-semibold text-lg">Continue</Text>
+          <Text className="text-white text-center font-semibold text-lg">Sign In</Text>
         )}
       </Pressable>
 
-      {/* Login Link */}
-      <Pressable onPress={() => router.push("/login")} className="mb-4">
+      {/* Signup Link */}
+      <Pressable onPress={() => router.push("/signup")} className="mb-8">
         <Text className="text-center text-gray-500 dark:text-gray-400">
-          Already registered? <Text className="text-green-500 font-medium">Sign in</Text>
+          Don't have an account? <Text className="text-green-500 font-medium">Sign up</Text>
         </Text>
       </Pressable>
     </View>
